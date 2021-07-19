@@ -1,8 +1,11 @@
 var express = require('express');
 var router = express.Router();
 const coinGeckoData = require('../Fetches/coingecko');
+const cors = require('cors');
 // const newsData = require('../Fetches/news');
 const newsData = require('../data.json');
+
+app.use(cors());
 
 /* GET home page. */
 router.get('/home', async function (req, res, next) {
