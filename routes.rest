@@ -1,1 +1,141 @@
-GET http://localhost:3000
+//Send data to frontend:
+GET http://localhost:3000/home
+
+###
+
+//***************SQL DATABASE******************
+
+//Get all the users:
+GET http://localhost:3000/user
+
+###
+
+//Test connection with the database:
+GET http://localhost:3000/time
+
+###
+
+//Get one user by id:
+GET http://localhost:3000/user/1
+
+###
+
+//Get links of the user:
+GET http://localhost:3000/links/2
+
+###
+
+//Get coins of the user:
+GET http://localhost:3000/coins/3
+
+###
+
+//Get alerts of the user:
+GET http://localhost:3000/alerts/2
+
+###
+
+//************************POST ROUTES************
+
+//Create a new user:
+POST http://localhost:3000/user
+Content-Type: application/json
+
+{
+  "username": "another_user",
+  "password": "lululu",
+  "email": "another_user@gmail.com"
+}
+
+###
+
+//Create a link:
+POST http://localhost:3000/links
+Content-Type: application/json
+
+{
+  "user_id": "3",
+  "link": "https://google.com"
+}
+
+###
+
+//Add a coin:
+POST http://localhost:3000/coins
+Content-Type: application/json
+
+{
+  "user_id": "3",
+  "coin_id": "bitcoin",
+  "quantity": "7"
+}
+
+###
+
+//Add a price alert:
+POST http://localhost:3000/alerts
+Content-Type: application/json
+
+{
+  "user_id": "3",
+  "coin_id": "bitcoin",
+  "trigger_value": "72000"
+}
+
+###
+
+//************************DELETE ROUTES************
+
+//Delete a user by id:
+DELETE http://localhost:3000/user/4
+
+###
+
+//Delete a link of the user:
+DELETE http://localhost:3000/links/3
+
+###
+
+//Delete all the links of the user:
+DELETE http://localhost:3000/allinks/2
+
+###
+
+//Delete a coin of the user:
+DELETE http://localhost:3000/coins/3
+
+###
+
+//Delete all the links of the user:
+DELETE http://localhost:3000/allcoins/2
+
+###
+
+//Delete an alert of the user:
+DELETE http://localhost:3000/alerts/7
+
+###
+
+//Delete all the alerts of the user:
+DELETE http://localhost:3000/allalerts/1
+
+###
+
+//************************PUT ROUTES************
+
+//Modify user data:
+PUT http://localhost:3000/user/1
+Content-Type: application/json
+
+{
+  "username": "alinut",
+  "password": "bitcoin",
+  "email": "alin@gmail.com"
+}
+
+###
+
+//Get all data for a user:
+GET http://localhost:3000/alldata/3
+
+###
