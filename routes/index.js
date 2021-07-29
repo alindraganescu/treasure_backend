@@ -5,6 +5,7 @@ const getCoinGeckoData = require('../Fetches/coingecko');
 // const getNewsData = require('../Fetches/news');
 const newsData = require('../data.json');
 const db = require('../database/client');
+const axios = require('axios');
 
 /* Send home page for frontend. */
 router.get('/home', async function (req, res, next) {
@@ -176,25 +177,25 @@ router.post('/coins', async (req, res) => {
 });
 
 //Add a price alert:
-router.post('/alerts', async (req, res) => {
-  try {
-    const { user_id, coin_id, trigger_value } = req.body;
-    const addAlert = {
-      text: `
-            INSERT INTO price_alert (user_id, coin_id, trigger_value)
-            VALUES ($1, $2, $3)
-            RETURNING *
-            `,
-      values: [user_id, coin_id, trigger_value],
-    };
+// router.post('/alerts', async (req, res) => {
+//   try {
+//     const { user_id, coin_id, trigger_value } = req.body;
+//     const addAlert = {
+//       text: `
+//             INSERT INTO price_alert (user_id, coin_id, trigger_value)
+//             VALUES ($1, $2, $3)
+//             RETURNING *
+//             `,
+//       values: [user_id, coin_id, trigger_value],
+//     };
 
-    const { rows: alertsData } = await db.query(addAlert);
+//     const { rows: alertsData } = await db.query(addAlert);
 
-    res.status(201).json(alertsData[0]);
-  } catch (e) {
-    res.sendStatus(500);
-  }
-});
+//     res.status(201).json(alertsData[0]);
+//   } catch (e) {
+//     res.sendStatus(500);
+//   }
+// });
 
 //**************************************DELETE ROUTES SQL DATABASE******************************************
 
@@ -459,10 +460,84 @@ router.get('/alldata/:id', async (req, res) => {
 router.post('/receive-alert', async (req, res) => {
   try {
     console.log(req.body);
+
+    // {
+    //   "type": "price",
+    //   "message": "ZCash (ZEC) went above 150.00 USD on Gemini.",
+    //   "currency": "ZEC",
+    //   "direction": "above",
+    //   "price": "150.00",
+    //   "target_currency": "USD",
+    //   "exchange": "Gemini"
+    // }
+
     res.sendStatus(200);
   } catch (e) {
     res.sendStatus(500);
   }
 });
 
+router.post('/alerts', async (req, res) => {
+  const { currency, price, direction, user_id, coin_id } = req.body;
+
+  try {
+    const url = 'https://api.cryptocurrencyalerting.com/v1/alert-conditions/';
+
+    const alertData = {
+      type: 'price',
+      currency, // Eg: ETH => one of https://cryptocurrencyalerting.com/coins.html
+      target_currency: 'USD',
+      price, // Eg: 45.6
+      direction, // Eg: 'above' or 'below'
+      channel: { name: 'webhook' },
+      exchange: 'Binance',
+    };
+
+    const headers = {
+      auth: {
+        username: process.env.TOKEN_CRYPTOCURRENCY_ALERTING,
+        password: null,
+      },
+    };
+
+    const { data: cryptoCurrencyAlertingRows } = await axios.post(
+      url,
+      alertData,
+      headers
+    );
+
+    const addAlert = {
+      text: `
+            INSERT INTO price_alert (user_id, coin_id, coin_symbol, crypto_currency_alerting_id, trigger_value)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+            `,
+      values: [
+        user_id,
+        coin_id,
+        currency,
+        cryptoCurrencyAlertingRows.id,
+        price,
+      ],
+    };
+
+    const { rows: alertsData } = await db.query(addAlert);
+
+    res.json({
+      status: 201,
+      message: 'Alert created successfully',
+      data: {
+        ...cryptoCurrencyAlertingRows,
+        ...alertsData[0],
+      },
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.sendStatus(500);
+  }
+});
+
 module.exports = router;
+
+//Alert token:
+//https://api.cryptocurrencyalerting.com/v1/alert-conditions/
