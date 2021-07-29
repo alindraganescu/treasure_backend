@@ -456,4 +456,13 @@ router.get('/alldata/:id', async (req, res) => {
   //   .catch((err) => console.error(err));
 });
 
+router.post('/receive-alert', async (req, res) => {
+  try {
+    console.log(req.body);
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(500);
+  }
+});
+
 module.exports = router;
