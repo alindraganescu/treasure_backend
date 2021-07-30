@@ -6,6 +6,7 @@ const getCoinGeckoData = require('../Fetches/coingecko');
 const newsData = require('../data.json');
 const db = require('../database/client');
 const axios = require('axios');
+const sendEmail = require('../services/mailer');
 
 /* Send home page for frontend. */
 router.get('/home', async function (req, res, next) {
@@ -471,8 +472,37 @@ router.post('/receive-alert', async (req, res) => {
     //   "exchange": "Gemini"
     // }
 
+    const result = await sendEmail(
+      'someone@something.com',
+      'Good job, Ben!',
+      'You made it work.',
+      '<h1>You made it work.</h1>'
+    );
+
+    res.json(result);
+
     res.sendStatus(200);
   } catch (e) {
+    res.sendStatus(500);
+  }
+});
+
+router.post('/send-email', async (req, res) => {
+  //   to,
+  //   subject,
+  //   text,
+  //   html,
+  try {
+    const result = await sendEmail(
+      'someone@something.com',
+      'Good job, Ben!',
+      'You made it work.',
+      '<h1>You made it work.</h1>'
+    );
+
+    res.json(result);
+  } catch (e) {
+    console.log(e.message);
     res.sendStatus(500);
   }
 });
@@ -537,7 +567,6 @@ router.post('/alerts', async (req, res) => {
   }
 });
 
-module.exports = router;
+//****************************************************************************
 
-//Alert token:
-//https://api.cryptocurrencyalerting.com/v1/alert-conditions/
+module.exports = router;
