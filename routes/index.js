@@ -546,7 +546,7 @@ router.post('/alerts', async (req, res) => {
       type: 'price',
       currency, // Eg: ETH => one of https://cryptocurrencyalerting.com/coins.html
       target_currency: 'USD',
-      price, // Eg: 45.6
+      price: Number(price), // Eg: 45.6
       direction, // Eg: 'above' or 'below'
       channel: { name: 'webhook' },
       exchange: 'Binance',
