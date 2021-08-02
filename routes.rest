@@ -61,13 +61,13 @@ Content-Type: application/json
 ###
 
 //Add a coin:
-POST http://localhost:3000/coins
+POST http://localhost:3001/coins
 Content-Type: application/json
 
 {
-  "user_id": "3",
+  "user_id": "7",
   "coin_id": "bitcoin",
-  "quantity": "7"
+  "quantity": "15"
 }
 
 ###
@@ -102,7 +102,7 @@ DELETE http://localhost:3000/allinks/2
 ###
 
 //Delete a coin of the user:
-DELETE http://localhost:3000/coins/3
+DELETE http://localhost:3001/coins/bitcoin/7
 
 ###
 

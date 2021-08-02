@@ -156,23 +156,52 @@ router.post('/links', async (req, res) => {
   }
 });
 
-//Add a coin for user:
+//Add/Update a coin for user:
 router.post('/coins', async (req, res) => {
+  const { user_id, coin_id, quantity } = req.body;
   try {
-    const { user_id, coin_id, quantity } = req.body;
-    const addCoin = {
+    const findCoin = {
       text: `
+      SELECT * 
+      FROM coins_owned 
+      WHERE user_id=$1
+      AND coin_id=$2
+      `,
+      values: [user_id, coin_id],
+    };
+
+    const { rows: findCoinData } = await db.query(findCoin);
+
+    if (!findCoinData.length) {
+      const addCoin = {
+        text: `
             INSERT INTO coins_owned (user_id, coin_id, quantity)
             VALUES ($1, $2, $3)
             RETURNING *
             `,
-      values: [user_id, coin_id, quantity],
-    };
+        values: [user_id, coin_id, quantity],
+      };
 
-    const { rows: coinsData } = await db.query(addCoin);
+      const { rows: coinsData } = await db.query(addCoin);
 
-    res.status(201).json(coinsData[0]);
+      res.status(201).json(coinsData[0]);
+    } else {
+      const updateCoin = {
+        text: `
+        UPDATE coins_owned
+        SET quantity=$1
+        WHERE user_id=$2
+        AND coin_id=$3 
+        `,
+        values: [quantity, user_id, coin_id],
+      };
+
+      const { rows: updatedCoinData } = await db.query(updateCoin);
+
+      res.status(200).json(updatedCoinData[0]);
+    }
   } catch (e) {
+    console.log(e.message);
     res.sendStatus(500);
   }
 });
@@ -275,12 +304,12 @@ router.delete('/allinks/:id', (req, res) => {
 });
 
 //Delete a coin
-router.delete('/coins/:id', (req, res) => {
-  const { id } = req.params;
+router.delete('/coins/:coin_id/:user_id', (req, res) => {
+  const { coin_id, user_id } = req.params;
 
   const deleteOneCoin = {
-    text: 'DELETE FROM coins_owned WHERE id=$1 RETURNING *',
-    values: [id],
+    text: 'DELETE FROM coins_owned WHERE coin_id=$1 AND user_id=$2 RETURNING *',
+    values: [coin_id, user_id],
   };
 
   db.query(deleteOneCoin)
