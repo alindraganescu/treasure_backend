@@ -435,12 +435,12 @@ router.get('/alldata/:id', async (req, res) => {
   };
 
   const getAlerts = {
-    text: 'SELECT id, coin_id, trigger_value from price_alert WHERE user_id = $1;',
+    text: 'SELECT id, coin_id, trigger_value, coin_symbol, crypto_currency_alerting_id from price_alert WHERE user_id = $1;',
     values: [id],
   };
 
   const getLinks = {
-    text: 'SELECT id, user_id, link from links WHERE user_id = $1;',
+    text: 'SELECT id, user_id, link, description from links WHERE user_id = $1;',
     values: [id],
   };
 
@@ -466,30 +466,69 @@ router.get('/alldata/:id', async (req, res) => {
   }
 });
 
+//We receive the alert from the Alerting service:
+
 router.post('/receive-alert', async (req, res) => {
   try {
     console.log(req.body);
 
-    // {
-    //   "type": "price",
-    //   "message": "ZCash (ZEC) went above 150.00 USD on Gemini.",
-    //   "currency": "ZEC",
-    //   "direction": "above",
-    //   "price": "150.00",
-    //   "target_currency": "USD",
-    //   "exchange": "Gemini"
+    // const alert = {
+    //   type: "price",
+    //   message: "Ethereum (ETH) went above 550.00 USD on Binance.",
+    //   currency: "ETH",
+    //   direction: "above",
+    //   price: "550.00",
+    //   target_currency: "USD",
+    //   exchange: "Binance"
     // }
 
-    const result = await sendEmail(
-      'someone@something.com',
-      'Good job, Ben!',
-      'You made it work.',
-      '<h1>You made it work.</h1>'
-    );
+    const alert = req.body
 
-    res.json(result);
+    const findUsersByAlert = {
+      text: `
+      SELECT u.email, u.username
+      FROM users u
+      JOIN price_alert pa
+      on pa.user_id = u.id
+      WHERE coin_symbol = $1
+      AND $2 ${alert.direction === "above" ? ">=" : "<="} pa.trigger_value
+    `,
+      values: [alert.currency, alert.price]
+    }
 
-    res.sendStatus(200);
+    const { rows: userRows} = await db.query(findUsersByAlert)
+
+    if (userRows.length) {
+
+      const userEmailSendingPromise = userRows.map(async (user) => {
+       return await sendEmail(
+          user.email,
+          `Your alert for ${alert.currency} has been triggered ${user.username}!`,
+          alert.message,
+          `<h1>${alert.message}</h1>`
+        );
+      })
+
+      const results = await Promise.all(userEmailSendingPromise)
+
+      res.json(results);
+    }
+
+    res.json(userRows)
+
+    
+
+    // price_alert
+    // id	user_id	coin_id	  trigger_value	coin_symbol	crypto_currency_alerting_id
+    // 21	   1	   ethereum	  500	           ETH	          801013
+
+    // users
+    // id	username	password	email
+    // 1	alinut	bitcoin	alin@gmail.com
+
+
+
+    // res.sendStatus(200);
   } catch (e) {
     res.sendStatus(500);
   }
@@ -521,14 +560,14 @@ router.post('/alerts', async (req, res) => {
   try {
     const url = 'https://api.cryptocurrencyalerting.com/v1/alert-conditions/';
 
-    const alertData = {
-      type: 'price',
+     const alertData = {
+      type: "price",
       currency, // Eg: ETH => one of https://cryptocurrencyalerting.com/coins.html
-      target_currency: 'USD',
-      price: Number(price), // Eg: 45.6
+      target_currency: "USD",
+      price, // Should be a string (eg: "500")
       direction, // Eg: 'above' or 'below'
-      channel: { name: 'webhook' },
-      exchange: 'Binance',
+      channel: { name: "webhook" },
+      exchange: "Binance",
     };
 
     const headers = {
