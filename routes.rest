@@ -73,13 +73,15 @@ Content-Type: application/json
 ###
 
 //Add a price alert:
-POST http://localhost:3000/alerts
+POST https://treasure-backend.herokuapp.com/alerts
 Content-Type: application/json
 
 {
-  "user_id": "3",
-  "coin_id": "bitcoin",
-  "trigger_value": "72000"
+  "currency": "ETH",
+  "price": 500,
+  "direction": "above",
+  "user_id": 1,
+  "coin_id": "ethereum"
 }
 
 ###

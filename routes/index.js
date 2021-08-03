@@ -439,15 +439,22 @@ router.get('/alldata/:id', async (req, res) => {
     values: [id],
   };
 
+  const getLinks = {
+    text: 'SELECT id, user_id, link from links WHERE user_id = $1;',
+    values: [id],
+  };
+
   try {
     const { rows: userRows } = await db.query(getOneUser);
     const { rows: coinRows } = await db.query(getCoins);
     const { rows: alertRows } = await db.query(getAlerts);
+    const { rows: linksRows } = await db.query(getLinks);
 
     const result = {
       ...userRows[0],
       coins: coinRows,
       alerts: alertRows,
+      links: linksRows,
     };
 
     res.json(result);
@@ -457,34 +464,6 @@ router.get('/alldata/:id', async (req, res) => {
       message: e.message,
     });
   }
-
-  // const getAllData = {
-  //   text: `
-  //     SELECT
-  //   restaurants.id,
-  //   restaurants.name as restaurant,
-  //   restaurants.long,
-  //   restaurants.lat,
-  //   restaurants.image_url,
-  //   city.name as city,
-  //   tag.name as tag
-  // FROM restaurants
-  // JOIN city
-  //   ON restaurants.city_id=city.id
-  // JOIN restaurant_has_tag
-  //   ON restaurants.id=restaurant_has_tag.id_restaurant
-  // JOIN tag
-  //   ON restaurant_has_tag.id_tag=tag.id;
-  //     `,
-  //   values: [username, password, email, id],
-  // };
-
-  // db.query(getAllData)
-  //   .then((data) => {
-  //     if (!data.rows.length) return res.send('This user does not exist.');
-  //     res.json(data.rows);
-  //   })
-  //   .catch((err) => console.error(err));
 });
 
 router.post('/receive-alert', async (req, res) => {
