@@ -264,12 +264,12 @@ router.delete('/user/:id', (req, res) => {
 // });
 
 //Delete a link of the user
-router.delete('/links/:id', (req, res) => {
-  const { id } = req.params;
+router.delete('/links/:link_id/:user_id', (req, res) => {
+  const { link_id, user_id } = req.params;
 
   const deleteLinks = {
-    text: 'DELETE FROM links WHERE id=$1 RETURNING *',
-    values: [id],
+    text: 'DELETE FROM links WHERE id=$1 AND user_id=$2 RETURNING *',
+    values: [link_id, user_id],
   };
 
   db.query(deleteLinks)
