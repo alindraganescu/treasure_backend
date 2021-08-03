@@ -138,14 +138,14 @@ router.post('/user', async (req, res) => {
 //Create a link
 router.post('/links', async (req, res) => {
   try {
-    const { user_id, link } = req.body;
+    const { user_id, link, description } = req.body;
     const createLink = {
       text: `
-            INSERT INTO links (user_id, link)
-            VALUES ($1, $2)
+            INSERT INTO links (user_id, link, description)
+            VALUES ($1, $2, $3)
             RETURNING *
             `,
-      values: [user_id, link],
+      values: [user_id, link, description],
     };
 
     const { rows: linksData } = await db.query(createLink);
