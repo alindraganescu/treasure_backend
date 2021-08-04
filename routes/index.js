@@ -468,7 +468,7 @@ router.get('/alldata/:id', async (req, res) => {
 
 //We receive the alert from the Alerting service:
 
-router.post('/receive-alert2', async (req, res) => {
+router.post('/cryptocurrencyalerting', async (req, res) => {
   try {
     console.log(req.body);
 
