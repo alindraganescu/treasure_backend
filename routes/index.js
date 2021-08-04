@@ -158,7 +158,7 @@ router.post('/links', async (req, res) => {
 
 //Add/Update a coin for user:
 router.post('/coins', async (req, res) => {
-  const { user_id, coin_id, quantity } = req.body;
+  const { user_id, coin_id, quantity, coin_value, value } = req.body;
   try {
     const findCoin = {
       text: `
@@ -175,11 +175,11 @@ router.post('/coins', async (req, res) => {
     if (!findCoinData.length) {
       const addCoin = {
         text: `
-            INSERT INTO coins_owned (user_id, coin_id, quantity)
-            VALUES ($1, $2, $3)
+            INSERT INTO coins_owned (user_id, coin_id, quantity, coin_value, value)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             `,
-        values: [user_id, coin_id, quantity],
+        values: [user_id, coin_id, quantity, coin_value, value],
       };
 
       const { rows: coinsData } = await db.query(addCoin);
@@ -189,11 +189,12 @@ router.post('/coins', async (req, res) => {
       const updateCoin = {
         text: `
         UPDATE coins_owned
-        SET quantity=$1
+        SET quantity=$1, coin_value=$4, value=$5
         WHERE user_id=$2
         AND coin_id=$3 
+        RETURNING *
         `,
-        values: [quantity, user_id, coin_id],
+        values: [quantity, user_id, coin_id, coin_value, value],
       };
 
       const { rows: updatedCoinData } = await db.query(updateCoin);
@@ -430,7 +431,7 @@ router.get('/alldata/:id', async (req, res) => {
   };
 
   const getCoins = {
-    text: 'SELECT id, coin_id, quantity from coins_owned WHERE user_id = $1;',
+    text: 'SELECT id, coin_id, quantity, coin_value, value from coins_owned WHERE user_id = $1;',
     values: [id],
   };
 
