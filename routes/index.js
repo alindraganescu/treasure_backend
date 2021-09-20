@@ -138,14 +138,14 @@ router.post('/user', async (req, res) => {
 //Create a link
 router.post('/links', async (req, res) => {
   try {
-    const { user_id, link } = req.body;
+    const { user_id, link, description } = req.body;
     const createLink = {
       text: `
-            INSERT INTO links (user_id, link)
-            VALUES ($1, $2)
+            INSERT INTO links (user_id, link, description)
+            VALUES ($1, $2, $3)
             RETURNING *
             `,
-      values: [user_id, link],
+      values: [user_id, link, description],
     };
 
     const { rows: linksData } = await db.query(createLink);
@@ -158,7 +158,7 @@ router.post('/links', async (req, res) => {
 
 //Add/Update a coin for user:
 router.post('/coins', async (req, res) => {
-  const { user_id, coin_id, quantity } = req.body;
+  const { user_id, coin_id, quantity, coin_value, value } = req.body;
   try {
     const findCoin = {
       text: `
@@ -175,11 +175,11 @@ router.post('/coins', async (req, res) => {
     if (!findCoinData.length) {
       const addCoin = {
         text: `
-            INSERT INTO coins_owned (user_id, coin_id, quantity)
-            VALUES ($1, $2, $3)
+            INSERT INTO coins_owned (user_id, coin_id, quantity, coin_value, value)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             `,
-        values: [user_id, coin_id, quantity],
+        values: [user_id, coin_id, quantity, coin_value, value],
       };
 
       const { rows: coinsData } = await db.query(addCoin);
@@ -189,11 +189,12 @@ router.post('/coins', async (req, res) => {
       const updateCoin = {
         text: `
         UPDATE coins_owned
-        SET quantity=$1
+        SET quantity=$1, coin_value=$4, value=$5
         WHERE user_id=$2
         AND coin_id=$3 
+        RETURNING *
         `,
-        values: [quantity, user_id, coin_id],
+        values: [quantity, user_id, coin_id, coin_value, value],
       };
 
       const { rows: updatedCoinData } = await db.query(updateCoin);
@@ -231,12 +232,12 @@ router.delete('/user/:id', (req, res) => {
 
 
 //Delete a link of the user
-router.delete('/links/:id', (req, res) => {
-  const { id } = req.params;
+router.delete('/links/:link_id/:user_id', (req, res) => {
+  const { link_id, user_id } = req.params;
 
   const deleteLinks = {
-    text: 'DELETE FROM links WHERE id=$1 RETURNING *',
-    values: [id],
+    text: 'DELETE FROM links WHERE id=$1 AND user_id=$2 RETURNING *',
+    values: [link_id, user_id],
   };
 
   db.query(deleteLinks)
@@ -380,12 +381,17 @@ router.get('/alldata/:id', async (req, res) => {
   };
 
   const getCoins = {
-    text: 'SELECT id, coin_id, quantity from coins_owned WHERE user_id = $1;',
+    text: 'SELECT id, coin_id, quantity, coin_value, value from coins_owned WHERE user_id = $1;',
     values: [id],
   };
 
   const getAlerts = {
-    text: 'SELECT id, coin_id, trigger_value from price_alert WHERE user_id = $1;',
+    text: 'SELECT id, coin_id, trigger_value, coin_symbol, crypto_currency_alerting_id from price_alert WHERE user_id = $1;',
+    values: [id],
+  };
+
+  const getLinks = {
+    text: 'SELECT id, user_id, link, description from links WHERE user_id = $1;',
     values: [id],
   };
 
@@ -393,11 +399,13 @@ router.get('/alldata/:id', async (req, res) => {
     const { rows: userRows } = await db.query(getOneUser);
     const { rows: coinRows } = await db.query(getCoins);
     const { rows: alertRows } = await db.query(getAlerts);
+    const { rows: linksRows } = await db.query(getLinks);
 
     const result = {
       ...userRows[0],
       coins: coinRows,
       alerts: alertRows,
+      links: linksRows,
     };
 
     res.json(result);
@@ -408,40 +416,78 @@ router.get('/alldata/:id', async (req, res) => {
     });
   }
 
- 
-
   // db.query(getAllData)
   //   .then((data) => {
   //     if (!data.rows.length) return res.send('This user does not exist.');
   //     res.json(data.rows);
   //   })
   //   .catch((err) => console.error(err));
+
 });
 
-router.post('/receive-alert', async (req, res) => {
+//We receive the alert from the Alerting service:
+
+router.post('/cryptocurrencyalerting', async (req, res) => {
   try {
     console.log(req.body);
 
-    // {
-    //   "type": "price",
-    //   "message": "ZCash (ZEC) went above 150.00 USD on Gemini.",
-    //   "currency": "ZEC",
-    //   "direction": "above",
-    //   "price": "150.00",
-    //   "target_currency": "USD",
-    //   "exchange": "Gemini"
+    // const alert = {
+    //   type: "price",
+    //   message: "Ethereum (ETH) went above 550.00 USD on Binance.",
+    //   currency: "ETH",
+    //   direction: "above",
+    //   price: "550.00",
+    //   target_currency: "USD",
+    //   exchange: "Binance"
     // }
 
-    const result = await sendEmail(
-      'someone@something.com',
-      'Good job, Ben!',
-      'You made it work.',
-      '<h1>You made it work.</h1>'
-    );
+    const alert = req.body
 
-    res.json(result);
+    const findUsersByAlert = {
+      text: `
+      SELECT u.email, u.username
+      FROM users u
+      JOIN price_alert pa
+      on pa.user_id = u.id
+      WHERE coin_symbol = $1
+      AND $2 ${alert.direction === "above" ? ">=" : "<="} pa.trigger_value
+    `,
+      values: [alert.currency, alert.price]
+    }
 
-    res.sendStatus(200);
+    const { rows: userRows} = await db.query(findUsersByAlert)
+
+    if (userRows.length) {
+
+      const userEmailSendingPromise = userRows.map(async (user) => {
+       return await sendEmail(
+          user.email,
+          `Your alert for ${alert.currency} has been triggered ${user.username}!`,
+          alert.message,
+          `<h1>${alert.message}</h1>`
+        );
+      })
+
+      const results = await Promise.all(userEmailSendingPromise)
+
+      res.json(results);
+    }
+
+    res.json(userRows)
+
+    
+
+    // price_alert
+    // id	user_id	coin_id	  trigger_value	coin_symbol	crypto_currency_alerting_id
+    // 21	   1	   ethereum	  500	           ETH	          801013
+
+    // users
+    // id	username	password	email
+    // 1	alinut	bitcoin	alin@gmail.com
+
+
+
+    // res.sendStatus(200);
   } catch (e) {
     res.sendStatus(500);
   }
@@ -473,14 +519,14 @@ router.post('/alerts', async (req, res) => {
   try {
     const url = 'https://api.cryptocurrencyalerting.com/v1/alert-conditions/';
 
-    const alertData = {
-      type: 'price',
+     const alertData = {
+      type: "price",
       currency, // Eg: ETH => one of https://cryptocurrencyalerting.com/coins.html
-      target_currency: 'USD',
-      price: Number(price), // Eg: 45.6
+      target_currency: "USD",
+      price, // Should be a string (eg: "500")
       direction, // Eg: 'above' or 'below'
-      channel: { name: 'webhook' },
-      exchange: 'Binance',
+      channel: { name: "webhook" },
+      exchange: "Binance",
     };
 
     const headers = {
