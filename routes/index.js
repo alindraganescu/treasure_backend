@@ -2,8 +2,8 @@ var express = require('express');
 var router = express.Router();
 const app = require('../app');
 const getCoinGeckoData = require('../Fetches/coingecko');
-// const getNewsData = require('../Fetches/news');
-const newsData = require('../data.json');
+const getNewsData = require('../Fetches/news');
+// const newsData = require('../data.json'); //news comming from my file, not from API
 const db = require('../database/client');
 const axios = require('axios');
 const sendEmail = require('../services/mailer');
@@ -12,7 +12,7 @@ const sendEmail = require('../services/mailer');
 router.get('/home', async function (req, res, next) {
   const { newsPage } = req.query;
   const coinGeckoData = await getCoinGeckoData();
-  // const newsData = await getNewsData(newsPage);
+  const newsData = await getNewsData(newsPage); //the news comming from API
 
   // res.json({ coinGecko: data, news: data2 });
   res.json({ coinGeckoData, newsData });
@@ -207,26 +207,7 @@ router.post('/coins', async (req, res) => {
   }
 });
 
-//Add a price alert:
-// router.post('/alerts', async (req, res) => {
-//   try {
-//     const { user_id, coin_id, trigger_value } = req.body;
-//     const addAlert = {
-//       text: `
-//             INSERT INTO price_alert (user_id, coin_id, trigger_value)
-//             VALUES ($1, $2, $3)
-//             RETURNING *
-//             `,
-//       values: [user_id, coin_id, trigger_value],
-//     };
 
-//     const { rows: alertsData } = await db.query(addAlert);
-
-//     res.status(201).json(alertsData[0]);
-//   } catch (e) {
-//     res.sendStatus(500);
-//   }
-// });
 
 //**************************************DELETE ROUTES SQL DATABASE******************************************
 
@@ -249,20 +230,6 @@ router.delete('/user/:id', (req, res) => {
     .catch((e) => res.status(500).send(e.message));
 });
 
-//Delete a user async/await refactoring:
-// router.delete('/user/:id', async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const deleteOneUser = {
-//       text: 'DELETE FROM users WHERE id=$1 RETURNING *',
-//       values: [id],
-//     };
-//     const { rows: deletedData } = await db.query(deleteOneUser);
-//     res.status(201).json(deletedData); //can I use deletedData all the time? same name for 10 routes inside the function?
-//   } catch (e) {
-//     res.sendStatus(500).send(e.message);
-//   }
-// });
 
 //Delete a link of the user
 router.delete('/links/:link_id/:user_id', (req, res) => {
@@ -401,23 +368,6 @@ router.put('/user/:id', (req, res) => {
     .catch((e) => res.status(500).send(e.message));
 });
 
-//Modify user data refactor with async/await
-
-// router.put('/user/:id', async (req, res) => {
-//   try {
-//   const { username, password, email } = req.body;
-//   const { id } = req.params;
-
-//   const updateOneUser = {
-//     text: 'UPDATE users SET username=$1, password=$2, email=$3 WHERE id=$4 RETURNING *',
-//     values: [username, password, email, id],
-//   };
-
-//   const { rows: updatedData } = await db.query(updateOneUser)
-//     .then((data) => res.json(data.rows))
-//   } catch (e) {
-//   res.status(500).send(e.message)}
-// });
 
 //************************************Retrieve all the database of the user:**********************
 
@@ -465,6 +415,14 @@ router.get('/alldata/:id', async (req, res) => {
       message: e.message,
     });
   }
+
+  // db.query(getAllData)
+  //   .then((data) => {
+  //     if (!data.rows.length) return res.send('This user does not exist.');
+  //     res.json(data.rows);
+  //   })
+  //   .catch((err) => console.error(err));
+
 });
 
 //We receive the alert from the Alerting service:
