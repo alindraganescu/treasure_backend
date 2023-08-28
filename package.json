@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www",
-    "logs": "heroku logs --tail --app treasure-backend"
+    "dev": "nodemon ./bin/www"
   },
   "dependencies": {
     "axios": "^0.21.1",
